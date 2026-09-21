@@ -28,4 +28,5 @@ model Card {
   createdAt   DateTime @default(now())
   deckId      Int
   deck        Deck     @relation(fields: [deckId], references: [id])
+  mastered    Boolean  @default(false)
 }
