@@ -7,10 +7,15 @@ const prisma = new PrismaClient({ adapter });
 
 async function main() {
   await prisma.card.deleteMany();
+  await prisma.deck.deleteMany();
+
+  const deck = await prisma.deck.create({ data: { name: "N3 조사" } });
   await prisma.card.createMany({
-    data: particles,
+    data: particles.map((particle) => ({ ...particle, deckId: deck.id })),
   });
-  console.log(`시드 완료: 카드 ${particles.length}개를 데이터베이스에 넣었습니다.`);
+  console.log(
+    `시드 완료: "${deck.name}" 단어장에 카드 ${particles.length}개를 넣었습니다.`
+  );
 }
 
 main()

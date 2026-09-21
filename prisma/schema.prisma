@@ -12,6 +12,13 @@ datasource db {
   provider = "sqlite"
 }
 
+model Deck {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+  cards     Card[]
+}
+
 model Card {
   id          Int      @id @default(autoincrement())
   particle    String
@@ -19,4 +26,6 @@ model Card {
   example     String
   translation String
   createdAt   DateTime @default(now())
+  deckId      Int
+  deck        Deck     @relation(fields: [deckId], references: [id])
 }
