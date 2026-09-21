@@ -1,0 +1,23 @@
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaClient } from "../src/generated/prisma/client";
+import { particles } from "../src/data/particles";
+
+const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL ?? "file:./dev.db" });
+const prisma = new PrismaClient({ adapter });
+
+async function main() {
+  await prisma.card.deleteMany();
+  await prisma.card.createMany({
+    data: particles,
+  });
+  console.log(`시드 완료: 카드 ${particles.length}개를 데이터베이스에 넣었습니다.`);
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
