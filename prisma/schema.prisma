@@ -28,6 +28,6 @@ model Card {
   translation String
   createdAt   DateTime @default(now())
   deckId      Int
-  deck        Deck     @relation(fields: [deckId], references: [id])
+  deck        Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
   mastered    Boolean  @default(false)
 }

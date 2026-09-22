@@ -5,6 +5,9 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import Flashcard from "@/components/Flashcard";
 import OcrUpload from "@/components/OcrUpload";
+import CardFieldsForm, {
+  type CardFieldValues,
+} from "@/components/CardFieldsForm";
 
 // /api/cards가 돌려주는 카드 하나의 모양입니다.
 // 데이터베이스의 Card 모델과 같은 필드를 갖지만, JSON으로 오가는 동안
@@ -27,17 +30,8 @@ type Deck = {
   name: string;
 };
 
-// 폼 입력값을 담는 타입입니다. Card와 필드는 같지만, 폼 전용으로 따로 둡니다.
-type NewCardForm = {
-  particle: string;
-  reading: string;
-  meaning: string;
-  example: string;
-  translation: string;
-};
-
 // 폼 입력칸이 비어있을 때 쓸 초기값입니다.
-const emptyForm: NewCardForm = {
+const emptyForm: CardFieldValues = {
   particle: "",
   reading: "",
   meaning: "",
@@ -88,9 +82,9 @@ export default function DeckPage() {
   // isFormOpen: "새 카드 추가" 폼을 보여줄지 말지 기억하는 상태값입니다.
   const [isFormOpen, setIsFormOpen] = useState(false);
 
-  // formValues: 폼의 입력칸 4개 값을 하나의 객체로 묶어서 기억합니다.
+  // formValues: 폼의 입력칸 5개 값을 하나의 객체로 묶어서 기억합니다.
   // 이렇게 input의 값이 항상 useState 값과 연결되어 있는 걸 "controlled input"이라고 부릅니다.
-  const [formValues, setFormValues] = useState<NewCardForm>(emptyForm);
+  const [formValues, setFormValues] = useState<CardFieldValues>(emptyForm);
 
   // errorMessage: 입력칸이 비어있거나 저장에 실패했을 때 보여줄 경고 문구입니다.
   const [errorMessage, setErrorMessage] = useState("");
@@ -199,7 +193,7 @@ export default function DeckPage() {
   }
 
   // input 하나가 바뀔 때마다 호출됩니다. 어떤 칸이 바뀌었는지는 fieldName으로 구분합니다.
-  function handleFieldChange(fieldName: keyof NewCardForm, value: string) {
+  function handleFieldChange(fieldName: keyof CardFieldValues, value: string) {
     setFormValues({
       ...formValues, // 기존 값들은 그대로 두고
       [fieldName]: value, // 바뀐 칸만 새 값으로 덮어씁니다
@@ -282,10 +276,15 @@ export default function DeckPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
-      {/* 단어장 목록으로 돌아가는 링크입니다 */}
-      <Link href="/decks" className="text-sm text-zinc-500 hover:underline">
-        ← 단어장 목록
-      </Link>
+      {/* 단어장 목록으로 돌아가는 링크와, 카드 목록을 수정/삭제하는 관리 화면으로 가는 링크입니다 */}
+      <div className="flex items-center gap-3 text-sm text-zinc-500">
+        <Link href="/decks" className="hover:underline">
+          ← 단어장 목록
+        </Link>
+        <Link href={`/decks/${deckId}/manage`} className="hover:underline">
+          카드 관리
+        </Link>
+      </div>
 
       <h1 className="text-xl font-bold">{deckName}</h1>
 
@@ -377,37 +376,8 @@ export default function DeckPage() {
       {/* isFormOpen이 true일 때는 입력 폼을 보여줍니다 */}
       {isFormOpen && (
         <div className="flex w-full max-w-xs flex-col gap-2 rounded border p-4">
-          <input
-            className="rounded border px-2 py-1"
-            placeholder="조사 (예: と)"
-            // value가 항상 formValues.particle과 같으므로 controlled input입니다.
-            value={formValues.particle}
-            onChange={(e) => handleFieldChange("particle", e.target.value)}
-          />
-          <input
-            className="rounded border px-2 py-1"
-            placeholder="읽는 법 (예: と)"
-            value={formValues.reading}
-            onChange={(e) => handleFieldChange("reading", e.target.value)}
-          />
-          <input
-            className="rounded border px-2 py-1"
-            placeholder="뜻"
-            value={formValues.meaning}
-            onChange={(e) => handleFieldChange("meaning", e.target.value)}
-          />
-          <input
-            className="rounded border px-2 py-1"
-            placeholder="일본어 예문"
-            value={formValues.example}
-            onChange={(e) => handleFieldChange("example", e.target.value)}
-          />
-          <input
-            className="rounded border px-2 py-1"
-            placeholder="한국어 해석"
-            value={formValues.translation}
-            onChange={(e) => handleFieldChange("translation", e.target.value)}
-          />
+          {/* value가 항상 formValues와 같으므로 controlled input입니다. */}
+          <CardFieldsForm values={formValues} onChange={handleFieldChange} />
 
           {/* errorMessage에 내용이 있을 때만 경고 문구를 보여줍니다 */}
           {errorMessage && (

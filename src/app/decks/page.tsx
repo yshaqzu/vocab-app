@@ -25,6 +25,11 @@ export default function DecksPage() {
   // errorMessage: 단어장 만들기가 실패했을 때 보여줄 경고 문구입니다.
   const [errorMessage, setErrorMessage] = useState("");
 
+  // editingDeckId: 지금 이름 수정 중인 단어장의 id입니다. null이면 아무것도 수정 중이 아닙니다.
+  const [editingDeckId, setEditingDeckId] = useState<number | null>(null);
+  // editDeckName: 수정 입력칸에 입력 중인 이름입니다. "취소"를 누르면 버려집니다.
+  const [editDeckName, setEditDeckName] = useState("");
+
   // 컴포넌트가 화면에 처음 나타난 직후 단어장 목록을 불러옵니다.
   useEffect(() => {
     fetch("/api/decks")
@@ -70,6 +75,79 @@ export default function DecksPage() {
     }
   }
 
+  // "수정" 버튼: 이 단어장을 이름 수정 모드로 바꿉니다.
+  function handleStartEditDeck(deck: Deck) {
+    setEditingDeckId(deck.id);
+    setEditDeckName(deck.name);
+    setErrorMessage("");
+  }
+
+  // "취소" 버튼: 수정하던 이름을 버리고 원래 이름으로 되돌립니다.
+  function handleCancelEditDeck() {
+    setEditingDeckId(null);
+    setEditDeckName("");
+  }
+
+  // "저장" 버튼: 수정한 이름을 PATCH /api/decks/{id}로 서버에 반영합니다.
+  async function handleSaveEditDeck(deckId: number) {
+    if (editDeckName.trim() === "") {
+      setErrorMessage("단어장 이름을 입력해주세요.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/decks/${deckId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: editDeckName }),
+      });
+
+      if (!response.ok) {
+        setErrorMessage("단어장 이름을 바꾸지 못했습니다. 다시 시도해주세요.");
+        return;
+      }
+
+      const updatedDeck: { name: string } = await response.json();
+      // PATCH 응답에는 _count가 없으므로, 카드 개수는 그대로 두고 이름만 바꿔치기합니다.
+      setDecks(
+        decks.map((deck) =>
+          deck.id === deckId ? { ...deck, name: updatedDeck.name } : deck
+        )
+      );
+      setEditingDeckId(null);
+      setEditDeckName("");
+      setErrorMessage("");
+    } catch (error) {
+      console.error("단어장 이름을 바꾸지 못했습니다.", error);
+      setErrorMessage("단어장 이름을 바꾸지 못했습니다. 다시 시도해주세요.");
+    }
+  }
+
+  // "삭제" 버튼: 한 번 더 확인한 뒤 DELETE /api/decks/{id}를 호출합니다.
+  // 이 단어장 안의 카드도 서버(DB의 cascade 삭제)에서 함께 지워집니다.
+  async function handleDeleteDeck(deck: Deck) {
+    const isConfirmed = window.confirm(
+      `"${deck.name}" 단어장을 삭제하시겠어요? 안의 카드도 모두 삭제됩니다.`
+    );
+    if (!isConfirmed) return;
+
+    try {
+      const response = await fetch(`/api/decks/${deck.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        setErrorMessage("단어장을 삭제하지 못했습니다. 다시 시도해주세요.");
+        return;
+      }
+
+      setDecks(decks.filter((d) => d.id !== deck.id));
+    } catch (error) {
+      console.error("단어장을 삭제하지 못했습니다.", error);
+      setErrorMessage("단어장을 삭제하지 못했습니다. 다시 시도해주세요.");
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -83,20 +161,70 @@ export default function DecksPage() {
       <h1 className="text-xl font-bold">단어장 목록</h1>
 
       <ul className="flex w-full max-w-xs flex-col gap-2">
-        {decks.map((deck) => (
-          <li key={deck.id}>
-            {/* Link를 누르면 새로고침 없이 해당 단어장의 플래시카드 화면으로 이동합니다 */}
-            <Link
-              href={`/decks/${deck.id}`}
-              className="flex items-center justify-between rounded border px-4 py-2 hover:bg-zinc-50"
+        {decks.map((deck) =>
+          editingDeckId === deck.id ? (
+            // 이름 수정 모드: 이름 자리가 입력칸으로 바뀌고, 저장/취소 버튼이 뜹니다.
+            <li
+              key={deck.id}
+              className="flex items-center gap-2 rounded border px-4 py-2"
             >
-              <span>{deck.name}</span>
-              <span className="text-sm text-zinc-500">
-                카드 {deck._count.cards}개
-              </span>
-            </Link>
-          </li>
-        ))}
+              <input
+                className="min-w-0 flex-1 rounded border px-2 py-1"
+                value={editDeckName}
+                onChange={(e) => setEditDeckName(e.target.value)}
+              />
+              <button
+                onClick={() => handleSaveEditDeck(deck.id)}
+                className="rounded border px-2 py-1 text-sm"
+              >
+                저장
+              </button>
+              <button
+                onClick={handleCancelEditDeck}
+                className="rounded border px-2 py-1 text-sm"
+              >
+                취소
+              </button>
+            </li>
+          ) : (
+            <li key={deck.id}>
+              {/* Link를 누르면 새로고침 없이 해당 단어장의 플래시카드 화면으로 이동합니다.
+                  단, 수정/삭제 버튼을 누른 경우에는 이 이동이 일어나면 안 되므로
+                  각 버튼의 onClick에서 preventDefault/stopPropagation으로 막습니다. */}
+              <Link
+                href={`/decks/${deck.id}`}
+                className="flex items-center justify-between gap-2 rounded border px-4 py-2 hover:bg-zinc-50"
+              >
+                <span>{deck.name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-zinc-500">
+                    카드 {deck._count.cards}개
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleStartEditDeck(deck);
+                    }}
+                    className="rounded border px-2 py-1 text-sm"
+                  >
+                    수정
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleDeleteDeck(deck);
+                    }}
+                    className="rounded border px-2 py-1 text-sm"
+                  >
+                    삭제
+                  </button>
+                </div>
+              </Link>
+            </li>
+          )
+        )}
       </ul>
 
       <div className="flex w-full max-w-xs flex-col gap-2 rounded border p-4">
