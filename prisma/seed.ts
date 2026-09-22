@@ -11,7 +11,12 @@ async function main() {
 
   const deck = await prisma.deck.create({ data: { name: "N3 조사" } });
   await prisma.card.createMany({
-    data: particles.map((particle) => ({ ...particle, deckId: deck.id })),
+    // 조사(は, が, に...)는 이미 히라가나이므로, 읽는 법도 그대로 씁니다.
+    data: particles.map((particle) => ({
+      ...particle,
+      reading: particle.particle,
+      deckId: deck.id,
+    })),
   });
   console.log(
     `시드 완료: "${deck.name}" 단어장에 카드 ${particles.length}개를 넣었습니다.`

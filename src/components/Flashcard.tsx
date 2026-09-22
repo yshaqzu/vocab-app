@@ -1,11 +1,16 @@
 "use client"; // 클릭 같은 상호작용이 있는 컴포넌트라서 브라우저에서 실행되어야 함을 표시합니다.
 
 import { useState } from "react";
-import type { Particle } from "@/data/particles";
 
 // 부모(page.tsx)로부터 카드 하나의 데이터를 props로 받습니다.
 type FlashcardProps = {
-  card: Particle;
+  card: {
+    particle: string;
+    reading: string;
+    meaning: string;
+    example: string;
+    translation: string;
+  };
 };
 
 export default function Flashcard({ card }: FlashcardProps) {
@@ -22,8 +27,13 @@ export default function Flashcard({ card }: FlashcardProps) {
       onClick={handleClick}
       className="cursor-pointer rounded border p-6 text-center"
     >
-      {/* 조사는 항상 보여줍니다 */}
-      <p className="text-2xl font-bold">{card.particle}</p>
+      {/* 조사/단어는 항상 보여줍니다. 읽는 법은 후리가나(ruby)로 붙입니다. */}
+      <p className="text-2xl font-bold">
+        <ruby>
+          {card.particle}
+          <rt>{card.reading}</rt>
+        </ruby>
+      </p>
 
       {/* isRevealed가 true일 때만 뜻/예문을 보여줍니다 */}
       {isRevealed && (

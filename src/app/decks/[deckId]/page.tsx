@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Flashcard from "@/components/Flashcard";
+import OcrUpload from "@/components/OcrUpload";
 
 // /api/cards가 돌려주는 카드 하나의 모양입니다.
 // 데이터베이스의 Card 모델과 같은 필드를 갖지만, JSON으로 오가는 동안
@@ -11,6 +12,7 @@ import Flashcard from "@/components/Flashcard";
 type Card = {
   id: number;
   particle: string;
+  reading: string;
   meaning: string;
   example: string;
   translation: string;
@@ -28,6 +30,7 @@ type Deck = {
 // 폼 입력값을 담는 타입입니다. Card와 필드는 같지만, 폼 전용으로 따로 둡니다.
 type NewCardForm = {
   particle: string;
+  reading: string;
   meaning: string;
   example: string;
   translation: string;
@@ -36,6 +39,7 @@ type NewCardForm = {
 // 폼 입력칸이 비어있을 때 쓸 초기값입니다.
 const emptyForm: NewCardForm = {
   particle: "",
+  reading: "",
   meaning: "",
   example: "",
   translation: "",
@@ -245,6 +249,13 @@ export default function DeckPage() {
     }
   }
 
+  // 사진으로 추가한 카드들이 저장되고 나면 OcrUpload가 이 함수를 호출합니다.
+  // 서버가 이미 저장을 끝낸 카드들이므로, 화면 상태에도 그대로 반영하기만 하면 됩니다.
+  function handleOcrCardsSaved(newCards: Card[]) {
+    setCards([...cards, ...newCards]);
+    setRoundQueue([...roundQueue, ...newCards.map((card) => card.id)]);
+  }
+
   // "취소" 버튼: 입력하던 내용을 버리고 폼을 닫습니다.
   function handleCancel() {
     setFormValues(emptyForm);
@@ -352,12 +363,15 @@ export default function DeckPage() {
 
       {/* isFormOpen이 false일 때는 "새 카드 추가" 버튼만 보여줍니다 */}
       {!isFormOpen && (
-        <button
-          onClick={() => setIsFormOpen(true)}
-          className="rounded border px-4 py-2"
-        >
-          새 카드 추가
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsFormOpen(true)}
+            className="rounded border px-4 py-2"
+          >
+            새 카드 추가
+          </button>
+          <OcrUpload deckId={deckId} onCardsSaved={handleOcrCardsSaved} />
+        </div>
       )}
 
       {/* isFormOpen이 true일 때는 입력 폼을 보여줍니다 */}
@@ -369,6 +383,12 @@ export default function DeckPage() {
             // value가 항상 formValues.particle과 같으므로 controlled input입니다.
             value={formValues.particle}
             onChange={(e) => handleFieldChange("particle", e.target.value)}
+          />
+          <input
+            className="rounded border px-2 py-1"
+            placeholder="읽는 법 (예: と)"
+            value={formValues.reading}
+            onChange={(e) => handleFieldChange("reading", e.target.value)}
           />
           <input
             className="rounded border px-2 py-1"

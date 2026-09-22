@@ -23,9 +23,9 @@ export async function GET(request: NextRequest) {
 // 단어장에 새로 저장합니다.
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { particle, meaning, example, translation, deckId } = body;
+  const { particle, reading, meaning, example, translation, deckId } = body;
 
-  const fields = { particle, meaning, example, translation };
+  const fields = { particle, reading, meaning, example, translation };
   const isAnyFieldInvalid = Object.values(fields).some(
     (value) => typeof value !== "string" || value.trim() === ""
   );
