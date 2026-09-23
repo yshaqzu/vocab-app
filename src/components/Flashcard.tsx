@@ -27,12 +27,16 @@ export default function Flashcard({ card }: FlashcardProps) {
       onClick={handleClick}
       className="cursor-pointer rounded border p-6 text-center"
     >
-      {/* 조사/단어는 항상 보여줍니다. 읽는 법은 후리가나(ruby)로 붙입니다. */}
+      {/* 조사/단어는 항상 보여줍니다. 읽는 법(후리가나)은 뒤집었을 때만 ruby로 붙입니다. */}
       <p className="text-2xl font-bold">
-        <ruby>
-          {card.particle}
-          <rt>{card.reading}</rt>
-        </ruby>
+        {isRevealed ? (
+          <ruby>
+            {card.particle}
+            <rt>{card.reading}</rt>
+          </ruby>
+        ) : (
+          card.particle
+        )}
       </p>
 
       {/* isRevealed가 true일 때만 뜻/예문을 보여줍니다 */}

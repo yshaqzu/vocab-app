@@ -19,10 +19,7 @@ export default function ManageDecksPage() {
   // isLoading: 서버에서 단어장 목록을 아직 가져오는 중인지 기억하는 값입니다.
   const [isLoading, setIsLoading] = useState(true);
 
-  // newDeckName: "새 단어장 만들기" 입력칸의 값입니다.
-  const [newDeckName, setNewDeckName] = useState("");
-
-  // errorMessage: 단어장 만들기가 실패했을 때 보여줄 경고 문구입니다.
+  // errorMessage: 이름 수정/삭제가 실패했을 때 보여줄 경고 문구입니다.
   const [errorMessage, setErrorMessage] = useState("");
 
   // editingDeckId: 지금 이름 수정 중인 단어장의 id입니다. null이면 아무것도 수정 중이 아닙니다.
@@ -44,36 +41,6 @@ export default function ManageDecksPage() {
         setIsLoading(false);
       });
   }, []);
-
-  // "만들기" 버튼을 눌렀을 때 실행됩니다.
-  async function handleCreateDeck() {
-    if (newDeckName.trim() === "") {
-      setErrorMessage("단어장 이름을 입력해주세요.");
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/decks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newDeckName }),
-      });
-
-      if (!response.ok) {
-        setErrorMessage("단어장을 만들지 못했습니다. 다시 시도해주세요.");
-        return;
-      }
-
-      const newDeck: Deck = await response.json();
-      // 새로 만든 단어장은 카드가 0개이니, _count를 직접 채워서 목록에 추가합니다.
-      setDecks([...decks, { ...newDeck, _count: { cards: 0 } }]);
-      setNewDeckName("");
-      setErrorMessage("");
-    } catch (error) {
-      console.error("단어장을 만들지 못했습니다.", error);
-      setErrorMessage("단어장을 만들지 못했습니다. 다시 시도해주세요.");
-    }
-  }
 
   // "수정" 버튼: 이 단어장을 이름 수정 모드로 바꿉니다.
   function handleStartEditDeck(deck: Deck) {
@@ -164,6 +131,16 @@ export default function ManageDecksPage() {
 
       <h1 className="text-xl font-bold">단어장 관리</h1>
 
+      {errorMessage && <p className="text-sm text-red-600">{errorMessage}</p>}
+
+      <Link
+        href="/decks/manage/new"
+        className="rounded border px-4 py-2"
+        aria-label="새 단어장 만들기"
+      >
+        +
+      </Link>
+
       <ul className="flex w-full max-w-xs flex-col gap-2">
         {decks.map((deck) =>
           editingDeckId === deck.id ? (
@@ -217,23 +194,6 @@ export default function ManageDecksPage() {
           )
         )}
       </ul>
-
-      <div className="flex w-full max-w-xs flex-col gap-2 rounded border p-4">
-        <input
-          className="rounded border px-2 py-1"
-          placeholder="새 단어장 이름"
-          value={newDeckName}
-          onChange={(e) => setNewDeckName(e.target.value)}
-        />
-
-        {errorMessage && (
-          <p className="text-sm text-red-600">{errorMessage}</p>
-        )}
-
-        <button onClick={handleCreateDeck} className="rounded border px-4 py-2">
-          만들기
-        </button>
-      </div>
     </div>
   );
 }

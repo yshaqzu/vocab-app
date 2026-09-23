@@ -4,10 +4,6 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Flashcard from "@/components/Flashcard";
-import OcrUpload from "@/components/OcrUpload";
-import CardFieldsForm, {
-  type CardFieldValues,
-} from "@/components/CardFieldsForm";
 
 // /api/cards가 돌려주는 카드 하나의 모양입니다.
 // 데이터베이스의 Card 모델과 같은 필드를 갖지만, JSON으로 오가는 동안
@@ -28,15 +24,6 @@ type Card = {
 type Deck = {
   id: number;
   name: string;
-};
-
-// 폼 입력칸이 비어있을 때 쓸 초기값입니다.
-const emptyForm: CardFieldValues = {
-  particle: "",
-  reading: "",
-  meaning: "",
-  example: "",
-  translation: "",
 };
 
 // 배열을 "무작위로 섞은 새 배열"로 만들어 돌려줍니다(원본은 바꾸지 않습니다).
@@ -79,16 +66,6 @@ export default function DeckPage() {
   // true인 동안은 화면에 "불러오는 중..."만 보여줍니다.
   const [isLoading, setIsLoading] = useState(true);
 
-  // isFormOpen: "새 카드 추가" 폼을 보여줄지 말지 기억하는 상태값입니다.
-  const [isFormOpen, setIsFormOpen] = useState(false);
-
-  // formValues: 폼의 입력칸 5개 값을 하나의 객체로 묶어서 기억합니다.
-  // 이렇게 input의 값이 항상 useState 값과 연결되어 있는 걸 "controlled input"이라고 부릅니다.
-  const [formValues, setFormValues] = useState<CardFieldValues>(emptyForm);
-
-  // errorMessage: 입력칸이 비어있거나 저장에 실패했을 때 보여줄 경고 문구입니다.
-  const [errorMessage, setErrorMessage] = useState("");
-
   // [불러오기] deckId가 정해지면(=페이지가 열리면) 이 단어장의 이름과 카드 목록을
   // 동시에 요청합니다. fetch도 "화면을 그리는 중"과는 상관없는 부수 효과라서
   // 그리기가 다 끝난 뒤 실행되는 useEffect 안에서 하는 게 안전합니다.
@@ -105,9 +82,9 @@ export default function DeckPage() {
         .then((data: Card[]) => {
           setCards(data);
           // 첫 라운드는, 아직 안 외운(mastered가 false인) 카드들을
-          // API가 준 순서(id 오름차순) 그대로 라운드 큐에 담습니다.
+          // 무작위로 섞은 순서로 라운드 큐에 담습니다.
           const unmastered = data.filter((card) => !card.mastered);
-          setRoundQueue(unmastered.map((card) => card.id));
+          setRoundQueue(shuffle(unmastered.map((card) => card.id)));
         }),
     ])
       .catch((error) => {
@@ -171,7 +148,7 @@ export default function DeckPage() {
   }
 
   // "처음부터 다시 복습하기" 버튼: 서버에 저장된 이 단어장의 모든 카드를
-  // mastered: false로 되돌리고, 새 라운드를 id 순서대로 다시 시작합니다.
+  // mastered: false로 되돌리고, 새 라운드를 무작위 순서로 다시 시작합니다.
   async function handleResetReview() {
     try {
       const response = await fetch(`/api/decks/${deckId}/reset`, {
@@ -185,76 +162,11 @@ export default function DeckPage() {
 
       const resetCards = cards.map((card) => ({ ...card, mastered: false }));
       setCards(resetCards);
-      setRoundQueue(resetCards.map((card) => card.id));
+      setRoundQueue(shuffle(resetCards.map((card) => card.id)));
       setMissedThisRound([]);
     } catch (error) {
       console.error("복습을 초기화하지 못했습니다.", error);
     }
-  }
-
-  // input 하나가 바뀔 때마다 호출됩니다. 어떤 칸이 바뀌었는지는 fieldName으로 구분합니다.
-  function handleFieldChange(fieldName: keyof CardFieldValues, value: string) {
-    setFormValues({
-      ...formValues, // 기존 값들은 그대로 두고
-      [fieldName]: value, // 바뀐 칸만 새 값으로 덮어씁니다
-    });
-  }
-
-  // "추가" 버튼을 눌렀을 때 실행됩니다.
-  // 서버에 저장 요청을 보내고 응답을 기다려야 하므로 async 함수로 만듭니다.
-  async function handleAddCard() {
-    // 4개 칸 중 하나라도 빈 칸(공백만 있는 경우 포함)이면 추가하지 않고 경고만 보여줍니다.
-    const isAnyFieldEmpty = Object.values(formValues).some(
-      (value) => value.trim() === ""
-    );
-    if (isAnyFieldEmpty) {
-      setErrorMessage("모든 칸을 채워주세요.");
-      return;
-    }
-
-    try {
-      // /api/cards로 POST 요청을 보내 이 단어장(deckId)에 새 카드를 저장합니다.
-      const response = await fetch("/api/cards", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formValues, deckId }),
-      });
-
-      if (!response.ok) {
-        setErrorMessage("카드를 저장하지 못했습니다. 다시 시도해주세요.");
-        return;
-      }
-
-      // 서버가 만들어준 카드(id, createdAt이 채워지고 mastered는 false인 상태)를 응답으로 받습니다.
-      const newCard: Card = await response.json();
-
-      // 기존 배열은 그대로 두고, 그 뒤에 새 카드 하나만 붙인 "새 배열"을 만듭니다.
-      setCards([...cards, newCard]);
-      // 새 카드는 아직 안 외운 카드이니 이번 라운드 큐 맨 뒤에 추가합니다.
-      setRoundQueue([...roundQueue, newCard.id]);
-
-      // 폼을 초기 상태로 되돌리고 닫습니다.
-      setFormValues(emptyForm);
-      setErrorMessage("");
-      setIsFormOpen(false);
-    } catch (error) {
-      console.error("카드를 저장하지 못했습니다.", error);
-      setErrorMessage("카드를 저장하지 못했습니다. 다시 시도해주세요.");
-    }
-  }
-
-  // 사진으로 추가한 카드들이 저장되고 나면 OcrUpload가 이 함수를 호출합니다.
-  // 서버가 이미 저장을 끝낸 카드들이므로, 화면 상태에도 그대로 반영하기만 하면 됩니다.
-  function handleOcrCardsSaved(newCards: Card[]) {
-    setCards([...cards, ...newCards]);
-    setRoundQueue([...roundQueue, ...newCards.map((card) => card.id)]);
-  }
-
-  // "취소" 버튼: 입력하던 내용을 버리고 폼을 닫습니다.
-  function handleCancel() {
-    setFormValues(emptyForm);
-    setErrorMessage("");
-    setIsFormOpen(false);
   }
 
   // 아직 서버에서 카드 목록을 받아오는 중이면, 나머지 화면은 그리지 않고
@@ -298,7 +210,7 @@ export default function DeckPage() {
       {cards.length === 0 ? (
         // 새로 만든 단어장처럼 카드가 하나도 없을 때
         <p className="text-sm text-zinc-500">
-          아직 카드가 없어요. 아래에서 첫 카드를 추가해보세요.
+          아직 카드가 없어요. &quot;카드 관리&quot;에서 첫 카드를 추가해보세요.
         </p>
       ) : currentCard ? (
         // 이번 라운드 큐에 카드가 남아있을 때: 카드와 "몰랐어요"/"맞혔어요" 버튼을 보여줍니다.
@@ -357,47 +269,6 @@ export default function DeckPage() {
           >
             처음부터 다시 복습하기
           </button>
-        </div>
-      )}
-
-      {/* isFormOpen이 false일 때는 "새 카드 추가" 버튼만 보여줍니다 */}
-      {!isFormOpen && (
-        <div className="flex gap-2">
-          <button
-            onClick={() => setIsFormOpen(true)}
-            className="rounded border px-4 py-2"
-          >
-            새 카드 추가
-          </button>
-          <OcrUpload deckId={deckId} onCardsSaved={handleOcrCardsSaved} />
-        </div>
-      )}
-
-      {/* isFormOpen이 true일 때는 입력 폼을 보여줍니다 */}
-      {isFormOpen && (
-        <div className="flex w-full max-w-xs flex-col gap-2 rounded border p-4">
-          {/* value가 항상 formValues와 같으므로 controlled input입니다. */}
-          <CardFieldsForm values={formValues} onChange={handleFieldChange} />
-
-          {/* errorMessage에 내용이 있을 때만 경고 문구를 보여줍니다 */}
-          {errorMessage && (
-            <p className="text-sm text-red-600">{errorMessage}</p>
-          )}
-
-          <div className="flex gap-2">
-            <button
-              onClick={handleAddCard}
-              className="rounded border px-4 py-2"
-            >
-              추가
-            </button>
-            <button
-              onClick={handleCancel}
-              className="rounded border px-4 py-2"
-            >
-              취소
-            </button>
-          </div>
         </div>
       )}
     </div>

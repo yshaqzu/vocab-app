@@ -176,6 +176,14 @@ export default function ManageCardsPage() {
 
       {errorMessage && <p className="text-sm text-red-600">{errorMessage}</p>}
 
+      <Link
+        href={`/decks/${deckId}/manage/new`}
+        className="rounded border px-4 py-2"
+        aria-label="새 카드 추가"
+      >
+        +
+      </Link>
+
       {cards.length === 0 ? (
         <p className="text-sm text-zinc-500">아직 카드가 없어요.</p>
       ) : (
