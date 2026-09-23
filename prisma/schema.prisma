@@ -30,4 +30,10 @@ model Card {
   deckId      Int
   deck        Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
   mastered    Boolean  @default(false)
+
+  // SM-2 간격 반복 모드에서 쓰는 값들입니다(라운드 모드의 mastered와는 별개).
+  srsRepetitions Int      @default(0)
+  srsInterval    Int      @default(0)
+  srsEaseFactor  Float    @default(2.5)
+  srsDueDate     DateTime @default(now())
 }
