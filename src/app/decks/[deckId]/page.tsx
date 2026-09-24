@@ -10,7 +10,7 @@ type Deck = {
   name: string;
 };
 
-// 학습 모드 선택 화면입니다. 라운드 모드(/round)와 SM-2 모드(/srs) 중 하나를 골라
+// 학습 모드 선택 화면입니다. 라운드 모드(/round), SM-2 모드(/srs), 즉시 재등장 모드(/requeue) 중 하나를 골라
 // 실제 학습 화면으로 들어갑니다.
 export default function DeckModeSelectPage() {
   const params = useParams<{ deckId: string }>();
@@ -55,6 +55,12 @@ export default function DeckModeSelectPage() {
           className="rounded border px-4 py-2 text-center"
         >
           SM-2 모드로 학습
+        </Link>
+        <Link
+          href={`/decks/${deckId}/requeue`}
+          className="rounded border px-4 py-2 text-center"
+        >
+          즉시 재등장 모드로 학습
         </Link>
       </div>
     </div>
