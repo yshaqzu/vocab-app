@@ -40,6 +40,8 @@ export default function ManageCardsPage() {
   // editValues: 수정 폼에 입력 중인 값입니다. "취소"를 누르면 이 값은 버려지고 원래 카드 값이 그대로 남습니다.
   const [editValues, setEditValues] = useState<CardFieldValues | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  // searchQuery: 검색창에 입력 중인 글자입니다. 서버에 다시 묻지 않고 이미 불러온 cards를 화면에서 바로 걸러냅니다.
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -153,6 +155,17 @@ export default function ManageCardsPage() {
     }
   }
 
+  // 단어/읽는 법/뜻 중 하나라도 검색어를 포함하면 보여줍니다(대소문자·앞뒤 공백 무시).
+  const query = searchQuery.trim().toLowerCase();
+  const visibleCards =
+    query === ""
+      ? cards
+      : cards.filter((card) =>
+          [card.particle, card.reading, card.meaning].some((field) =>
+            field.toLowerCase().includes(query)
+          )
+        );
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -184,11 +197,22 @@ export default function ManageCardsPage() {
         +
       </Link>
 
+      <input
+        type="text"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        placeholder="단어, 읽는 법, 뜻으로 검색"
+        aria-label="카드 검색"
+        className="w-full max-w-md rounded border px-3 py-2"
+      />
+
       {cards.length === 0 ? (
         <p className="text-sm text-zinc-500">아직 카드가 없어요.</p>
+      ) : visibleCards.length === 0 ? (
+        <p className="text-sm text-zinc-500">검색 결과가 없어요.</p>
       ) : (
         <ul className="flex w-full max-w-md flex-col gap-3">
-          {cards.map((card) => (
+          {visibleCards.map((card) => (
             <li key={card.id} className="rounded border p-4">
               {editingCardId === card.id && editValues ? (
                 // 수정 모드: "새 카드 추가"와 같은 입력 폼을 보여줍니다.
